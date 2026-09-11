@@ -1,4 +1,5 @@
 name: CI
+run-name: "CI ${{ inputs.leg || github.event_name }} ${{ inputs.racecar_run }}"
 
 # Trigger the workflow on push or pull request
 on:
@@ -8,6 +9,24 @@ on:
       - main
   pull_request:
 
+  workflow_dispatch:
+    inputs:
+      leg:
+        description: "baseline (uninstrumented) or instrumented (under chalk/curiosity)"
+        type: choice
+        options: [instrumented, baseline]
+        default: baseline
+      profile:
+        description: "CrashOverride chalk profile"
+        type: string
+        default: curiosity-tests-racecar
+      racecar_run:
+        description: "racecar correlation token, echoed into the run name"
+        type: string
+        default: ""
+
+env:
+  CHALK_ON: ${{ inputs.leg == 'instrumented' }}
 # the `concurrency` settings ensure that not too many CI jobs run in parallel
 concurrency:
   # group by workflow and ref; the last slightly strange component ensures that for pull
@@ -46,5 +65,6 @@ jobs:
           mode: onlyneeded
       - uses: gap-actions/process-coverage@v3
       - uses: codecov/codecov-action@v6
+        continue-on-error: true   # racecar: scan/report/push step, must not fail the build
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
